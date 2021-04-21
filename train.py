@@ -2,6 +2,8 @@
 '''适配机房服务器'''
 import platform
 import sys
+import time
+
 systemp = platform.system()
 if systemp == "Linux":
     # sys.path.remove('/usr/lib/python2.7/dist-packages')
@@ -78,7 +80,7 @@ if __name__ == '__main__':
     batch_size_val = batch_size =get_eval("batch_size",4)
     
     continue_train =get_eval("是否接上次模型",1)
-    if continue_train==1:
+    if continue_train==1 and os.access(filepath, os.F_OK):
         print("载入模型名称",filepath)
         if (not (os.path.exists('./log/plt/{}.pkl'.format(experiment)))):  #存在性判定，衔接训练old_tra_loss等必须存在，若是直接移值h5,则plt文件夹中是没有pkl文件的，会报错
             old_tra_loss = []
@@ -92,6 +94,9 @@ if __name__ == '__main__':
             old_val_loss = old_history['val_loss']
             old_tra_acc = old_history[acc_value]   # 为防止因版本导致“acc”和“accuracy”改来改去，此变量统一在define.py中定义为acc_value
             old_val_acc = old_history['val_'+acc_value]
+    else:
+        print("不存在该模型!!\n")
+        time.sleep(1)
     
     Train_Num = tra_df.shape[0] # 训练集数据量（整型）
     Val_Num = val_df.shape[0]   # 验证集数据量（整型）

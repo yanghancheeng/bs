@@ -6,6 +6,7 @@ import numpy as np
 import os
 import math
 import platform
+import time
 import tensorflow as tf
 if  tf.__version__ == "1.13.1":  #这是杨汉城的个人电脑
     acc_value = "acc"
@@ -15,13 +16,14 @@ else:
     print("若发生acc还是accuracy选择问题，请在define中修改acc_value值")
     acc_value = '?'  #按照自己的来
 
-if(not(os.path.exists(os.getcwd()+"\\log"))):  #没有newmask则创建newmask
-    os.mkdir(os.getcwd()+"\\log")
-    print("创建路径./log")
-    if (not (os.path.exists(os.getcwd() + "\\log\\model_save"))):  # 没有newmask则创建newmask
-        os.mkdir(os.getcwd() + "\\log\\model_save")
-        print("创建路径./log/model_save")
-
+def createPath(path):
+    if (not (os.path.exists(os.getcwd() + path))):
+        os.mkdir(os.getcwd() + path)
+        print("创建路径"+os.getcwd() + path)
+createPath("\\log")
+createPath("\\log\\model_save")
+createPath("\\log\\plt")
+createPath("\\log\\tfbd")
 
 input_height=224
 input_width=224
