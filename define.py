@@ -1,12 +1,21 @@
 # %%
+'''适配机房服务器'''
+import platform
+import sys
+import os
+sysEn = platform.system()
+if sysEn == "Linux":
+    print('OS is linux!!!\n')
+    if os.path.exists('/usr/lib/python2.7/dist-packages'):
+        sys.path.remove('/usr/lib/python2.7/dist-packages')
+else:
+    print('OS is windows!!!\n')
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import MultipleLocator
 import pandas as pd
 import numpy as np
-import os
 import math
 import pickle
-import platform
 import time
 import tensorflow as tf
 
@@ -67,9 +76,10 @@ def continue_train_def(experiment, filepath, ):
             old_tra_acc = []
             old_val_acc = []
     else:
-        print("不存在该模型!!\n")
+        if continue_train==1:
+            print("不存在该模型!!\n")
         if os.access(pkl_path, os.F_OK):
-            print("也不存在pkl历史训练数据文件!!\n")
+            print("不存在pkl历史训练数据文件!!\n")
         continue_train == 0
         time.sleep(2)
 

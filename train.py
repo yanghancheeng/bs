@@ -1,16 +1,5 @@
 # coding: utf-8
-'''适配机房服务器'''
-import platform
-import sys
-
-sysEn = platform.system()
-if sysEn == "Linux":
-    # sys.path.remove('/usr/lib/python2.7/dist-packages')
-    print('OS is linux!!!\n')
-else:
-    print('OS is windows!!!\n')
-
-from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from define import *
 from my_Generator_Model import getModel, myAugDataGenerator
@@ -40,12 +29,12 @@ edr = {
     # 实验名[0], 实验类型[1]（关系到数据生成方法）, 学习率[2], 训练是否包含原图[3] ,训练集验证集比值[4],数据集划分种子[5],学习率衰减系数[6]
     # 实验类型对应。1：生成器无任何增强  2：普通数据增强  3：掩膜背景增强  4：混合（2和3）增强
     #   [0]       [1]   [2]    [3] [4]   [5] [6]
-    0:['none',     1,   0.005, 1,  0.9,  0,  0.001,],
-    1:['ImageNet', 1,   1e-5,  1,  0.9,  0,  0.001,],  #训练集与验证集的处理方式一样，不进行普通数据增强也不进行背景增强 学习率起始Strat 1e-5
-    2:['aug',      2,   1e-5,  0,  0.9,  0,  0.001,],  #strat 1e-5  前12轮左右不进行任何增强，即aug手动置0，12轮后可看到收敛，再开启增强
-    3:['mask',     3,   1e-5,  0,  0.9,  0,  0.001,],  #增强开启同上，在12轮后
-    4:['mask_aug', 4,   1e-5,  0,  0.9,  0,  0.001,],  #同上
-    5:['Xcep',     4,   2e-4,  0,  0.9,  0,  0.001,],  #可能为最优实验，增强开启时间由于实验做得少暂不确定
+    0:['none',     1,   0.005, 1,  0.9,  0,  0.001, ],
+    1:['ImageNet', 1,   1e-5,  1,  0.9,  0,  0.001, ],  # 训练集与验证集的处理方式一样，不进行普通数据增强也不进行背景增强 学习率起始Start 1e-5
+    2:['aug',      2,   1e-5,  0,  0.9,  0,  0.001, ],  # start 1e-5  前12轮左右不进行任何增强，即aug手动置0，12轮后可看到收敛，再开启增强
+    3:['mask',     3,   1e-5,  0,  0.9,  0,  0.001, ],  # 增强开启同上，在12轮后
+    4:['mask_aug', 4,   1e-5,  0,  0.9,  0,  0.001, ],  # 同上
+    5:['Xcep',     4,   2e-4,  0,  0.9,  0,  0.001, ],  # 可能为最优实验，增强开启时间由于实验做得少暂不确定
 }
 
 if __name__ == '__main__':
@@ -114,31 +103,30 @@ if __name__ == '__main__':
                       ]
 
 
-    # 训练
     def model_train():  # 因为作用域问题，该函数只能定义在这里
-        history = model.fit_generator(G1,
-                                      Train_Num // batch_size + 1,
-                                      callbacks=callbacks_list,
-                                      validation_data=G2,
-                                      validation_steps=Val_Num // batch_size + 1,  # 因为验证集不必要增强运算和内存占用，能省出更多资源利用
-                                      epochs=epochs, )
+        the_history = model.fit_generator(G1,
+                                          Train_Num // batch_size + 1,
+                                          callbacks=callbacks_list,
+                                          validation_data=G2,
+                                          validation_steps=Val_Num // batch_size + 1,  # 因为验证集不必要增强运算和内存占用，能省出更多资源利用
+                                          epochs=epochs, )
 
         score = model.evaluate_generator(GTest, Test_Num // 2)
         print("样本准确率%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
 
         if continue_train == 1:
-            history.history['loss'] = old_tra_loss + history.history['loss']
-            history.history['val_loss'] = old_val_loss + history.history['val_loss']
-            history.history[acc_value] = old_tra_acc + history.history[acc_value]
-            history.history['val_' + acc_value] = old_val_acc + history.history['val_' + acc_value]
-        training_vis(history, './log/plt/', experiment)  # experiment为所作实验名
-        save_history(history, './log/plt/', experiment)
+            the_history.history['loss'] = old_tra_loss + the_history.history['loss']
+            the_history.history['val_loss'] = old_val_loss + the_history.history['val_loss']
+            the_history.history[acc_value] = old_tra_acc + the_history.history[acc_value]
+            the_history.history['val_' + acc_value] = old_val_acc + the_history.history['val_' + acc_value]
+        training_vis(the_history, './log/plt/', experiment)  # experiment为所作实验名
+        save_history(the_history, './log/plt/', experiment)
         # 保存
 
         with open('./log/plt/{}.pkl'.format(experiment), 'wb') as file_pi:
-            pickle.dump(history.history, file_pi)
+            pickle.dump(the_history.history, file_pi)
 
-        return history
+        return the_history
 
     history = model_train()
 
