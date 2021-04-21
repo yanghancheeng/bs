@@ -31,6 +31,7 @@ def getModel(sel,continue_train,input_shape,filepath):
             model = get_VGG(1, input_shape, out_node)  # ImageNet
         else:
             model = get_VGG(0, input_shape, out_node)
+        return model
 
     out_node=10
 

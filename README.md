@@ -2,7 +2,7 @@
 
 常用git命令
 
-```bash
+```C++
 // 在当前目录新建一个 Git 代码库
 git init
 
@@ -28,5 +28,23 @@ $ git push [remote] --all
 git pull
 git pull origin master
 git pull origin master --allow-unrelated-histories
+
+
+//开发分支（dev）上的代码达到上线的标准后，要合并到 master 分支
+
+ git checkout dev
+ git pull
+ git checkout master
+ git merge dev
+ git push -u origin master
+ 
 ```
+
+![](https://pic2.zhimg.com/v2-33046daeab21be7fea0fc6a4223bad8d_b.jpg)
+
+可以简单的概括为：
+
+>`git fetch`是将远程主机的最新内容拉到本地，用户在检查了以后决定是否合并到工作本机分支中。
+>
+>而`git pull` 则是将远程主机的最新内容拉下来后直接合并，即：`git pull = git fetch + git merge`，这样可能会产生冲突，需要手动解决。
 
