@@ -2,7 +2,6 @@
 '''适配机房服务器'''
 import platform
 import sys
-import time
 
 systemp = platform.system()
 if systemp == "Linux":
@@ -48,6 +47,7 @@ edr = {
     5:['Xcep',     4,   2e-4,  0,  0.9,  0,  0.001,],  #可能为最优实验，增强开启时间由于实验做得少暂不确定
 }
 
+
 if __name__ == '__main__':
 
     print(edr)
@@ -79,25 +79,7 @@ if __name__ == '__main__':
     epochs=get_eval("epochs",1)
     batch_size_val = batch_size =get_eval("batch_size",4)
     
-    continue_train =get_eval("是否接上次模型",1)
-    if continue_train==1 and os.access(filepath, os.F_OK):
-        print("载入模型名称",filepath)
-        if (not (os.path.exists('./log/plt/{}.pkl'.format(experiment)))):  #存在性判定，衔接训练old_tra_loss等必须存在，若是直接移值h5,则plt文件夹中是没有pkl文件的，会报错
-            old_tra_loss = []
-            old_val_loss = []
-            old_tra_acc = []
-            old_val_acc = []
-        else:
-            with open('./log/plt/{}.pkl'.format(experiment), 'rb') as file_pi:  #读取上一次训练历史，以衔接完整损失精度曲线
-                old_history = pickle.load(file_pi)
-            old_tra_loss = old_history['loss']
-            old_val_loss = old_history['val_loss']
-            old_tra_acc = old_history[acc_value]   # 为防止因版本导致“acc”和“accuracy”改来改去，此变量统一在define.py中定义为acc_value
-            old_val_acc = old_history['val_'+acc_value]
-    else:
-        print("不存在该模型!!\n")
-        time.sleep(1)
-    
+
     Train_Num = tra_df.shape[0] # 训练集数据量（整型）
     Val_Num = val_df.shape[0]   # 验证集数据量（整型）
     Test_Num = test_df.shape[0] # 验证集数据量（整型）
@@ -114,18 +96,8 @@ if __name__ == '__main__':
     cv2.imwrite('ck1.png', (a[0][1]+1)*127.5)
 
     #模型获取
+    continue_train = continue_train_def(experiment,filepath)  #续训检测
     model = getModel(sel,continue_train,input_shape,filepath)
-
-    # base_model = VGG16(input_shape = input_shape,
-    #         include_top = False,
-    #         weights = None,
-    #             )
-    # headModel = base_model.output
-    # headModel = Flatten(name = 'flatten')(headModel)
-    # headModel = Dense(512,activation = 'relu')(headModel)
-    # headModel = Dense(512,activation = 'relu')(headModel)
-    # headModel = Dense(10,activation = 'softmax')(headModel)
-    # model = Model(inputs=base_model.input, outputs=headModel)
 
     '''编译参数选择——交叉熵损失或二元损失'''
     model.compile(loss='categorical_crossentropy',  #binary_crossentropy categorical_crossentropy
@@ -142,25 +114,33 @@ if __name__ == '__main__':
     ]
 
     # 训练
-    history = model.fit_generator(G1, 
-                                    Train_Num//batch_size+1, 
-                                    callbacks=callbacks_list, 
-                                    validation_data=G2, 
-                                    validation_steps=Val_Num//batch_size+1, #因为验证集不必要增强运算和内存占用，能省出更多资源利用
-                                    epochs=epochs,)
+    def model_train():  #因为作用域问题，该函数只能定义在这里
+        history = model.fit_generator(G1,
+                                        Train_Num//batch_size+1,
+                                        callbacks=callbacks_list,
+                                        validation_data=G2,
+                                        validation_steps=Val_Num//batch_size+1, #因为验证集不必要增强运算和内存占用，能省出更多资源利用
+                                        epochs=epochs,)
 
-    score = model.evaluate_generator(Gtest,Test_Num//2)
-    print("样本准确率%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
-    if continue_train==1:
-        history.history['loss'] = old_tra_loss + history.history['loss']
-        history.history['val_loss'] = old_val_loss + history.history['val_loss']
-        history.history[acc_value] = old_tra_acc + history.history[acc_value] 
-        history.history['val_'+acc_value] = old_val_acc + history.history['val_'+acc_value] 
-    training_vis(history, './log/plt/', experiment)  # experiment为所作实验名
-    save_history(history, './log/plt/', experiment)
-    #保存
-    with open('./log/plt/{}.pkl'.format(experiment), 'wb') as file_pi:
-        pickle.dump(history.history, file_pi)
+        score = model.evaluate_generator(Gtest, Test_Num // 2)
+        print("样本准确率%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
+
+        if continue_train == 1:
+            history.history['loss'] = old_tra_loss + history.history['loss']
+            history.history['val_loss'] = old_val_loss + history.history['val_loss']
+            history.history[acc_value] = old_tra_acc + history.history[acc_value]
+            history.history['val_' + acc_value] = old_val_acc + history.history['val_' + acc_value]
+        training_vis(history, './log/plt/', experiment)  # experiment为所作实验名
+        save_history(history, './log/plt/', experiment)
+        # 保存
+
+        with open('./log/plt/{}.pkl'.format(experiment), 'wb') as file_pi:
+            pickle.dump(history.history, file_pi)
+
+        return history
+
+    history = model_train()
+
 
     while True:  # 如果效果不好,又不想麻烦地重新执行程序再训，那么这里通过循环判断是否需要再训
         try:
@@ -178,27 +158,11 @@ if __name__ == '__main__':
                         print("程序结束~")
                         exit()
         else:
+            continue_train = 1
             old_tra_loss = history.history['loss']
             old_val_loss = history.history['val_loss']
             old_tra_acc = history.history[acc_value]   # 为防止因版本导致“acc”和“accuracy”改来改去，此变量统一在define.py中定义为acc_value
             old_val_acc = history.history['val_'+acc_value]
 
+            history = model_train()
 
-            history = model.fit_generator(G1, 
-                                            Train_Num//batch_size+1, 
-                                            callbacks=callbacks_list, 
-                                            validation_data=G2, 
-                                            validation_steps=Val_Num//batch_size+1, #因为验证集不必要增强运算和内存占用，能省出更多资源利用
-                                            epochs=epochs,)
-            score = model.evaluate_generator(Gtest,Test_Num//2)
-            print("样本准确率%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
-
-            history.history['loss'] = old_tra_loss + history.history['loss']
-            history.history['val_loss'] = old_val_loss + history.history['val_loss']
-            history.history[acc_value] = old_tra_acc + history.history[acc_value] 
-            history.history['val_'+acc_value] = old_val_acc + history.history['val_'+acc_value] 
-
-            training_vis(history, './log/plt/', experiment)  # experiment为所作实验名
-            save_history(history, './log/plt/', experiment)
-            with open('./log/plt/{}.pkl'.format(experiment), 'wb') as file_pi:
-                pickle.dump(history.history, file_pi)
