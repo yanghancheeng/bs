@@ -5,6 +5,7 @@ from tensorflow.keras.layers import Dropout, Flatten, Dense, GlobalAveragePoolin
 from tensorflow.keras import Model
 from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications.xception import Xception
+from tensorflow.keras.applications.densenet import DenseNet121
 from tensorflow.keras.utils import to_categorical
 from define import comple_listdir
 import itertools
@@ -16,20 +17,36 @@ import random
 from define import get_str
 
 
+def get_Dense(input_shape, out_node):
+    base_model = DenseNet121(include_top=False,
+                             weights='imagenet',
+                             input_shape=input_shape)
+    headModel = base_model.output
+    headModel = Flatten(name='flatten')(headModel)
+    headModel = Dense(512, activation='relu')(headModel)
+    headModel = Dense(512, activation='relu')(headModel)
+    headModel = Dense(out_node, activation='softmax')(headModel)
+    model = Model(inputs=base_model.input, outputs=headModel)
+    # for layer in model.layers[:freeze]:  # 在incl_fc=2的情况下，freeze一般取20
+    #     layer.trainable = False
+    return model
+
 def getModel(sel, continue_train, input_shape, filepath):
     def initMode():
-        if sel == 5:
-            model = get_Xception(input_shape, out_node)  # Xecp
-        elif sel == 4:
-            model = get_VGG(1, input_shape, out_node)  # mask_aug
-        elif sel == 3:
-            model = get_VGG(1, input_shape, out_node)  # mask
-        elif sel == 2:
-            model = get_VGG(1, input_shape, out_node)  # aug
+        if sel == 0:
+            model = get_VGG(0, input_shape, out_node)
         elif sel == 1:
             model = get_VGG(1, input_shape, out_node)  # ImageNet
+        elif sel == 2:
+            model = get_VGG(1, input_shape, out_node)  # aug
+        elif sel == 3:
+            model = get_VGG(1, input_shape, out_node)  # mask
+        elif sel == 4:
+            model = get_VGG(1, input_shape, out_node)  # mask_aug
+        elif sel == 5:
+            model = get_Xception(input_shape, out_node)  # Xecp
         else:
-            model = get_VGG(0, input_shape, out_node)
+            model = get_Dense(input_shape, out_node)
         return model
 
     out_node = 10

@@ -84,7 +84,6 @@ def continue_train_def(experiment, filepath, ):
         time.sleep(2)
 
 
-# %%
 # 功能函数：路径列表函数改写os.listdir ==> comple_listdir
 def comple_listdir(in_path):
     path_list = os.listdir(in_path)

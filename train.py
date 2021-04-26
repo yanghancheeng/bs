@@ -4,6 +4,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from define import *
 from my_Generator_Model import getModel, myAugDataGenerator
 import pickle
+import pandas as pd
 import os
 import cv2
 
@@ -21,25 +22,28 @@ def display():
           '\n通道数nChannels: ', nChannels, '通道',
           '\n参与训练类别: ', len(traDf['category'].value_counts()), '类', '\n')
     stop = input("是否继续? [Y]/N ：")
-    if ((stop == 'n') or (stop == 'N')):
+    if (stop == 'n') or (stop == 'N'):
         exit()
+
 
 # experiment_dir
 edr = {
     # 实验名[0], 实验类型[1]（关系到数据生成方法）, 学习率[2], 训练是否包含原图[3] ,训练集验证集比值[4],数据集划分种子[5],学习率衰减系数[6]
     # 实验类型对应。1：生成器无任何增强  2：普通数据增强  3：掩膜背景增强  4：混合（2和3）增强
     #   [0]       [1]   [2]    [3] [4]   [5] [6]
-    0:['none',     1,   0.005, 1,  0.9,  0,  0.001, ],
-    1:['ImageNet', 1,   1e-5,  1,  0.9,  0,  0.001, ],  # 训练集与验证集的处理方式一样，不进行普通数据增强也不进行背景增强 学习率起始Start 1e-5
-    2:['aug',      2,   1e-5,  0,  0.9,  0,  0.001, ],  # start 1e-5  前12轮左右不进行任何增强，即aug手动置0，12轮后可看到收敛，再开启增强
-    3:['mask',     3,   1e-5,  0,  0.9,  0,  0.001, ],  # 增强开启同上，在12轮后
-    4:['mask_aug', 4,   1e-5,  0,  0.9,  0,  0.001, ],  # 同上
-    5:['Xcep',     4,   2e-4,  0,  0.9,  0,  0.001, ],  # 可能为最优实验，增强开启时间由于实验做得少暂不确定
+    0: ['none',     1,   0.005, 1,  0.9,  0,  0.001, ],
+    1: ['ImageNet', 1,   1e-5,  1,  0.9,  0,  0.001, ],  # 训练集与验证集的处理方式一样，不进行普通数据增强也不进行背景增强 学习率起始Start 1e-5
+    2: ['aug',      2,   1e-5,  0,  0.9,  0,  0.001, ],  # start 1e-5  前12轮左右不进行任何增强，即aug手动置0，12轮后可看到收敛，再开启增强
+    3: ['mask',     3,   1e-5,  0,  0.9,  0,  0.001, ],  # 增强开启同上，在12轮后
+    4: ['mask_aug', 4,   1e-5,  0,  0.9,  0,  0.001, ],  # 同上
+    5: ['Xcep',     4,   2e-4,  0,  0.9,  0,  0.001, ],  # 可能为最优实验，增强开启时间由于实验做得少暂不确定
+    6: ['Dense',    4,   2e-4,  0,  0.9,  0,  0.001, ],  # 还没实现
 }
+
 
 if __name__ == '__main__':
 
-    print(edr)
+    print(pd.DataFrame(edr, [' ExpName', ' Type', '  LearnRate', '  InclPre', '  T_V_Rate', '  Seed', '  Lr_Decay']).T)
     sel = get_eval("实验", 5)
     exp = edr[sel]
     experiment = exp[0]
@@ -93,13 +97,14 @@ if __name__ == '__main__':
                   metrics=['accuracy'])  # ,get_lr_metric(optimizer)
     model.summary()
 
-    # 回调
-    # checkpoint = ModelCheckpoint(filepath, monitor='val_'+acc_value, verbose=1, save_best_only=True, save_weights_only=False, mode='max')
+    # 回调 checkpoint = ModelCheckpoint(filepath, monitor='val_'+acc_value, verbose=1, save_best_only=True,
+    # save_weights_only=False, mode='max')
     checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, save_weights_only=False,
                                  mode='auto')
 
     callbacks_list = [checkpoint,
-                      # tensorflow.keras.callbacks.EarlyStopping(patience=3, monitor='val_loss'),  # Interrupt training if `val_loss` stops improving for over 2 epochs
+                      # tensorflow.keras.callbacks.EarlyStopping(patience=3, monitor='val_loss'),  # Interrupt
+                      # training if `val_loss` stops improving for over 2 epochs
                       ]
 
 
