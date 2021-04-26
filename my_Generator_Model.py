@@ -1,7 +1,7 @@
 # from tensorflow.keras import backend as K
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.layers import Dropout, Flatten, Dense, GlobalAveragePooling2D
+from tensorflow.keras.models import load_model, Model
+from tensorflow.keras.layers import Flatten, Dense, GlobalAveragePooling2D, Dropout
 from tensorflow.keras import Model
 from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications.xception import Xception
@@ -21,15 +21,15 @@ def get_Dense(input_shape, out_node):
     base_model = DenseNet121(include_top=False,
                              weights='imagenet',
                              input_shape=input_shape)
-    headModel = base_model.output
-    headModel = Flatten(name='flatten')(headModel)
-    headModel = Dense(512, activation='relu')(headModel)
-    headModel = Dense(512, activation='relu')(headModel)
-    headModel = Dense(out_node, activation='softmax')(headModel)
-    model = Model(inputs=base_model.input, outputs=headModel)
+    x = base_model.output
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(128, activation='relu')(x)
+    predictions = Dense(out_node, activation='sigmoid')(x)
+    model = Model(inputs=base_model.input, outputs=predictions)
     # for layer in model.layers[:freeze]:  # 在incl_fc=2的情况下，freeze一般取20
     #     layer.trainable = False
     return model
+
 
 def getModel(sel, continue_train, input_shape, filepath):
     def initMode():
