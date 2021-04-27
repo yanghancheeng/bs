@@ -1,17 +1,16 @@
 # coding: utf-8
 from tensorflow.keras.optimizers import SGD
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
+from tensorflow.keras.callbacks import ModelCheckpoint  # EarlyStopping
 from define import *
 from my_Generator_Model import getModel, myAugDataGenerator
 import pickle
-import cv2
 from copy import deepcopy
 from hxConfMat import myCMPlot
 
 
 def display():
     print('该次实验为：', experiment,
-          '\n可能的图像增强模式:', expType, '\n',
+          '\n可能的图像增强模式:', exp['typ'], '\n',
           '\n训练好的模型将会保存在:', filepath, '\n',
           '有以下类别需要训练：', os.listdir('data/train/'), '\n',  # 最好再说一下具体的数目
           '\n训练集目录数据量:  ', Train_Num,
@@ -30,42 +29,31 @@ def display():
 edr = {
     # 实验名[0], 实验类型[1]（关系到数据生成方法）, 学习率[2], 训练是否包含原图[3] ,训练集验证集比值[4],数据集划分种子[5],学习率衰减系数[6]
     # 实验类型对应。1：生成器无任何增强  2：普通数据增强  3：掩膜背景增强  4：混合（2和3）增强
-    #   [0]       [1]    [2]    [3] [4]   [5] [6]
-    0: ['none', 1, 0.005, 1, 0.9, 0, 0.001, ],
-    1: ['ImageNet', 1, 1e-5, 1, 0.9, 0, 0.001, ],  # 训练集与验证集的处理方式一样，不进行普通数据增强也不进行背景增强 学习率起始Start 1e-5
-    2: ['aug', 2, 1e-5, 0, 0.9, 0, 0.001, ],  # start 1e-5  前12轮左右不进行任何增强，即aug手动置0，12轮后可看到收敛，再开启增强
-    3: ['mask', 3, 1e-5, 0, 0.9, 0, 0.001, ],  # 增强开启同上，在12轮后
-    4: ['mask_aug', 4, 1e-5, 0, 0.9, 0, 0.001, ],  # 同上
-    5: ['Xcep', 4, 2e-4, 0, 0.9, 0, 0.001, ],  # 可能为最优实验，增强开启时间由于实验做得少暂不确定
-    6: ['Dense', 4, 2e-4, 0, 0.9, 0, 0.001, ],  # 还没实现
+    0: {'exp': 'none',     'typ': 1, 'lr': 5e-3, 'inPre': 1, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 0},
+    1: {'exp': 'ImageNet', 'typ': 1, 'lr': 1e-5, 'inPre': 1, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 0},
+    2: {'exp': 'aug',      'typ': 2, 'lr': 1e-5, 'inPre': 0, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 4},
+    3: {'exp': 'mask',     'typ': 3, 'lr': 1e-5, 'inPre': 0, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 4},
+    4: {'exp': 'mask_aug', 'typ': 4, 'lr': 1e-5, 'inPre': 0, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 4},
+    5: {'exp': 'Xcep',     'typ': 4, 'lr': 2e-4, 'inPre': 0, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 4},
+    6: {'exp': 'Dense',    'typ': 4, 'lr': 2e-4, 'inPre': 0, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 4},
 }
 
 if __name__ == '__main__':
-
-    print(pd.DataFrame(edr, [' ExpName', ' Type', '  LearnRate', '  InclPre', '  T_V_Rate', '  Seed', '  Lr_Decay']).T)
+    print(pd.DataFrame(edr).T)
     sel = get_eval("实验", 6)
-    exp = edr[sel]
-    experiment = exp[0]
-    expType = exp[1]
+    exp = edr[sel]  # dic
+    experiment = exp['exp']
     filepath = './log/model_save/' + experiment + '.h5'  # 模型保存路径
     # 学习率
-    lr = get_eval("学习率", exp[2])
-    print("学习率衰减系数", exp[6], '\n')
+    exp['lr'] = get_eval("学习率", exp['lr'])
+    print("学习率衰减系数", exp['decay'], '\n')
     # 数据集
-    dFile = 'dataset.csv'
-    print(dFile)
-    traDf, valDf, testDf = get_train_val_df(dFile)
+    traDf, valDf, testDf = get_train_val_df('dataset.csv')
 
     # 增强倍数
-    if expType == 1:
-        Aug = 0
-        inclPreImg = 1
-    else:
-        Aug = get_eval("增强倍数Aug", 6)
-        if Aug:
-            inclPreImg = get_eval("inclPreImg", exp[3])  # train_include_preimage
-        else:
-            inclPreImg = 1  # 如果不增强，那么训练的就只有原图，此时原图必须存在
+    if exp['typ'] != 1:  # 非类型一必要定义增强倍数
+        exp['Aug'] = get_eval("增强倍数Aug", exp['Aug'])
+        exp['inPre'] = get_eval("inclPreImg", exp['inPre'])  # train_include_preimage
 
     batch_size_val = batch_size = get_eval("batch_size", 4)
     epochs = get_eval("epochs", 1)
@@ -76,22 +64,23 @@ if __name__ == '__main__':
     display()
 
     # 数据集迭代器
-    print('expType:', expType)
-    G1 = myAugDataGenerator(traDf, expType, Aug, batch_size, input_height, input_width, incl_preimg=inclPreImg)
+    print('生成器类型:', exp['typ'])
+    G1 = myAugDataGenerator(traDf, exp['typ'], exp['Aug'], batch_size, input_height, input_width,
+                            incl_preimg=exp['inPre'])
     G2 = myAugDataGenerator(valDf, 1, 0, batch_size, input_height, input_width, incl_preimg=1)
     GTest = myAugDataGenerator(testDf, 1, 0, 2, input_height, input_width, incl_preimg=1)
     # 训练集生成抽样
-    a = next(G1)
-    cv2.imwrite('ck0.png', (a[0][0] + 1) * 127.5)
-    cv2.imwrite('ck1.png', (a[0][1] + 1) * 127.5)
+    # a = next(G1)
+    # cv2.imwrite('ck0.png', (a[0][0] + 1) * 127.5)
+    # cv2.imwrite('ck1.png', (a[0][1] + 1) * 127.5)
 
-    # 模型获取
+    # 续训与模型获取
     continue_train, oldHistoryList = continue_train_def(experiment, filepath)  # 续训检测
     model = getModel(sel, continue_train, input_shape, filepath)
 
     '''编译参数选择——交叉熵损失或二元损失'''
     model.compile(loss='categorical_crossentropy',  # binary_crossentropy categorical_crossentropy
-                  optimizer=SGD(lr=lr, decay=exp[6], momentum=0.9, nesterov=True),
+                  optimizer=SGD(lr=exp['lr'], decay=exp['decay'], momentum=0.9, nesterov=True),
                   # SGD(lr=1e-4,momentum=0.9)  Adam(lr=1e-4) , decay=1e-7
                   metrics=['accuracy'])  # ,get_lr_metric(optimizer)
     model.summary()
@@ -135,11 +124,11 @@ if __name__ == '__main__':
         return the_history
 
 
-    the_history = model_train()
+    history = model_train()
 
     while True:  # 如果效果不好,又不想麻烦地重新执行程序再训，那么这里通过循环判断是否需要再训
         try:
-            print("实验学习率为", lr)
+            print("实验学习率为", exp['lr'])
             epochs = int(input("如果不训，请敲回车，如果还训，请输入轮数："))
         except Exception as ex:
             print("再好好想想！")
@@ -154,9 +143,9 @@ if __name__ == '__main__':
                     exit()
         else:
             continue_train = 1
-            oldHistoryList = [deepcopy(the_history.history['loss']),
-                              deepcopy(the_history.history['val_loss']),
-                              deepcopy(the_history.history[acc_value]),
-                              deepcopy(the_history.history['val_' + acc_value])]
+            oldHistoryList = [deepcopy(history.history['loss']),
+                              deepcopy(history.history['val_loss']),
+                              deepcopy(history.history[acc_value]),
+                              deepcopy(history.history['val_' + acc_value])]
 
-            the_history = model_train()
+            history = model_train()

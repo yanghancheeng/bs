@@ -19,7 +19,7 @@ import pickle
 import time
 import tensorflow as tf
 
-if tf.__version__ == "1.13.1":  # 这是杨汉城的个人电脑
+if tf.__version__ == "1.13.1":  # 这是使用13版本的机器
     acc_value = "acc"
 elif tf.__version__ == "2.1.0":  # 服务器
     acc_value = "accuracy"
