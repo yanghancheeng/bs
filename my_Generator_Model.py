@@ -52,7 +52,7 @@ def getModel(sel, continue_train, input_shape, filepath):
     out_node = 10
 
     if continue_train == 1 and os.access(filepath, os.F_OK):
-        mdf = get_str('读入权重文件（完整路径）', filepath)
+        mdf = get_str('载入模型名称', filepath)
         return load_model(mdf)
     else:
         if continue_train == 1:

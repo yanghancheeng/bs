@@ -44,21 +44,11 @@ input_width = 224
 nChannels = 3
 input_shape = (input_height, input_width, nChannels)
 
-global old_tra_loss
-global old_val_loss
-global old_tra_acc
-global old_val_acc
-
 
 def continue_train_def(experiment, filepath, ):
     continue_train = get_eval("是否接上次模型", 1)
-    global old_tra_loss
-    global old_val_loss
-    global old_tra_acc
-    global old_val_acc
     pkl_path = './log/plt/{}.pkl'.format(experiment)
     if continue_train == 1 and os.access(filepath, os.F_OK):  #
-        print("载入模型名称", filepath)
         if os.access(pkl_path, os.F_OK):  # pkl文件存在。衔接训练old_tra_loss等必须存在，若是直接移值h5,则plt文件夹中是没有pkl文件的，会报错
             print("pkl文件存在")
             time.sleep(2)
@@ -70,18 +60,19 @@ def continue_train_def(experiment, filepath, ):
             old_val_acc = old_history['val_' + acc_value]
         else:
             print("无pkl文件！")
-            time.sleep(2)
             old_tra_loss = []
             old_val_loss = []
             old_tra_acc = []
             old_val_acc = []
+            time.sleep(2)
     else:
-        if continue_train==1:
+        if continue_train == 1:
             print("不存在该模型!!\n")
         if os.access(pkl_path, os.F_OK):
             print("不存在pkl历史训练数据文件!!\n")
         continue_train == 0
         time.sleep(2)
+    return [continue_train, [old_tra_loss, old_val_loss, old_tra_acc, old_val_acc]]
 
 
 # 功能函数：路径列表函数改写os.listdir ==> comple_listdir
@@ -89,7 +80,7 @@ def comple_listdir(in_path):
     path_list = os.listdir(in_path)
     for i in range(len(path_list)):
         path_list[i] = in_path + path_list[i]
-        if ("." in path_list[i].split('/')[-1]):  # 要给文件夹（没有.的）加'/'符号，如果是文件就不用加
+        if "." in path_list[i].split('/')[-1]:  # 要给文件夹（没有.的）加'/'符号，如果是文件就不用加
             pass  # 因为检测到文件所以什么都不用做
         else:
             path_list[i] = path_list[i] + '/'
@@ -113,23 +104,23 @@ def get_train_val_df(file, frac=0.9, random_state=0, clothes='only_mz'):
 
 # 默认值提示修改工具
 def get_eval(name, default_val):
-    get_eval = default_val
-    print(name, ' 默认:', get_eval)
+    theVal = default_val
+    print(name, ' 默认:', theVal)
     temp = input("请修改输入值，或回车 ：")
-    if (temp != ''):  # ''为回车
-        get_eval = eval(temp)
-    print('现', name, '为：', get_eval, "\n")
-    return get_eval
+    if temp != '':  # ''为回车
+        theVal = eval(temp)
+    print('现', name, '为：', theVal, "\n")
+    return theVal
 
 
 def get_str(name, default_val):
-    get_str = default_val
-    print(name, ' 默认:', get_str)
+    theStr = default_val
+    print(name, ' 默认:', theStr)
     temp = input("请修改输入值，或回车 ：")
-    if (temp != ''):  # ''为回车
-        get_str = temp
-    print('现', name, '为：', get_str, "\n")
-    return get_str
+    if temp != '':  # ''为回车
+        theStr = temp
+    print('现', name, '为：', theStr, "\n")
+    return theStr
 
 
 # 日志可视化，训练过程中的损失、精度变化

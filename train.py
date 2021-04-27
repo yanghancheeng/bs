@@ -4,9 +4,9 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from define import *
 from my_Generator_Model import getModel, myAugDataGenerator
 import pickle
-import pandas as pd
-import os
 import cv2
+from copy import deepcopy
+from hxConfMat import myCMPlot
 
 
 def display():
@@ -30,21 +30,20 @@ def display():
 edr = {
     # 实验名[0], 实验类型[1]（关系到数据生成方法）, 学习率[2], 训练是否包含原图[3] ,训练集验证集比值[4],数据集划分种子[5],学习率衰减系数[6]
     # 实验类型对应。1：生成器无任何增强  2：普通数据增强  3：掩膜背景增强  4：混合（2和3）增强
-    #   [0]       [1]   [2]    [3] [4]   [5] [6]
-    0: ['none',     1,   0.005, 1,  0.9,  0,  0.001, ],
-    1: ['ImageNet', 1,   1e-5,  1,  0.9,  0,  0.001, ],  # 训练集与验证集的处理方式一样，不进行普通数据增强也不进行背景增强 学习率起始Start 1e-5
-    2: ['aug',      2,   1e-5,  0,  0.9,  0,  0.001, ],  # start 1e-5  前12轮左右不进行任何增强，即aug手动置0，12轮后可看到收敛，再开启增强
-    3: ['mask',     3,   1e-5,  0,  0.9,  0,  0.001, ],  # 增强开启同上，在12轮后
-    4: ['mask_aug', 4,   1e-5,  0,  0.9,  0,  0.001, ],  # 同上
-    5: ['Xcep',     4,   2e-4,  0,  0.9,  0,  0.001, ],  # 可能为最优实验，增强开启时间由于实验做得少暂不确定
-    6: ['Dense',    4,   2e-4,  0,  0.9,  0,  0.001, ],  # 还没实现
+    #   [0]       [1]    [2]    [3] [4]   [5] [6]
+    0: ['none', 1, 0.005, 1, 0.9, 0, 0.001, ],
+    1: ['ImageNet', 1, 1e-5, 1, 0.9, 0, 0.001, ],  # 训练集与验证集的处理方式一样，不进行普通数据增强也不进行背景增强 学习率起始Start 1e-5
+    2: ['aug', 2, 1e-5, 0, 0.9, 0, 0.001, ],  # start 1e-5  前12轮左右不进行任何增强，即aug手动置0，12轮后可看到收敛，再开启增强
+    3: ['mask', 3, 1e-5, 0, 0.9, 0, 0.001, ],  # 增强开启同上，在12轮后
+    4: ['mask_aug', 4, 1e-5, 0, 0.9, 0, 0.001, ],  # 同上
+    5: ['Xcep', 4, 2e-4, 0, 0.9, 0, 0.001, ],  # 可能为最优实验，增强开启时间由于实验做得少暂不确定
+    6: ['Dense', 4, 2e-4, 0, 0.9, 0, 0.001, ],  # 还没实现
 }
-
 
 if __name__ == '__main__':
 
     print(pd.DataFrame(edr, [' ExpName', ' Type', '  LearnRate', '  InclPre', '  T_V_Rate', '  Seed', '  Lr_Decay']).T)
-    sel = get_eval("实验", 5)
+    sel = get_eval("实验", 6)
     exp = edr[sel]
     experiment = exp[0]
     expType = exp[1]
@@ -68,8 +67,8 @@ if __name__ == '__main__':
         else:
             inclPreImg = 1  # 如果不增强，那么训练的就只有原图，此时原图必须存在
 
-    epochs = get_eval("epochs", 1)
     batch_size_val = batch_size = get_eval("batch_size", 4)
+    epochs = get_eval("epochs", 1)
 
     Train_Num = traDf.shape[0]  # 训练集数据量（整型）
     Val_Num = valDf.shape[0]  # 验证集数据量（整型）
@@ -87,7 +86,7 @@ if __name__ == '__main__':
     cv2.imwrite('ck1.png', (a[0][1] + 1) * 127.5)
 
     # 模型获取
-    continue_train = continue_train_def(experiment, filepath)  # 续训检测
+    continue_train, oldHistoryList = continue_train_def(experiment, filepath)  # 续训检测
     model = getModel(sel, continue_train, input_shape, filepath)
 
     '''编译参数选择——交叉熵损失或二元损失'''
@@ -118,12 +117,14 @@ if __name__ == '__main__':
 
         score = model.evaluate_generator(GTest, Test_Num // 2)
         print("样本准确率%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
-
+        if_CM = get_eval("是否绘制混淆矩阵", 0)
+        if if_CM is 1:
+            myCMPlot(model, experiment)
         if continue_train == 1:
-            the_history.history['loss'] = old_tra_loss + the_history.history['loss']
-            the_history.history['val_loss'] = old_val_loss + the_history.history['val_loss']
-            the_history.history[acc_value] = old_tra_acc + the_history.history[acc_value]
-            the_history.history['val_' + acc_value] = old_val_acc + the_history.history['val_' + acc_value]
+            the_history.history['loss'] = oldHistoryList[0] + the_history.history['loss']
+            the_history.history['val_loss'] = oldHistoryList[1] + the_history.history['val_loss']
+            the_history.history[acc_value] = oldHistoryList[2] + the_history.history[acc_value]
+            the_history.history['val_' + acc_value] = oldHistoryList[3] + the_history.history['val_' + acc_value]
         training_vis(the_history, './log/plt/', experiment)  # experiment为所作实验名
         save_history(the_history, './log/plt/', experiment)
         # 保存
@@ -133,7 +134,8 @@ if __name__ == '__main__':
 
         return the_history
 
-    history = model_train()
+
+    the_history = model_train()
 
     while True:  # 如果效果不好,又不想麻烦地重新执行程序再训，那么这里通过循环判断是否需要再训
         try:
@@ -152,9 +154,9 @@ if __name__ == '__main__':
                     exit()
         else:
             continue_train = 1
-            old_tra_loss = history.history['loss']
-            old_val_loss = history.history['val_loss']
-            old_tra_acc = history.history[acc_value]  # 为防止因版本导致“acc”和“accuracy”改来改去，此变量统一在define.py中定义为acc_value
-            old_val_acc = history.history['val_' + acc_value]
+            oldHistoryList = [deepcopy(the_history.history['loss']),
+                              deepcopy(the_history.history['val_loss']),
+                              deepcopy(the_history.history[acc_value]),
+                              deepcopy(the_history.history['val_' + acc_value])]
 
-            history = model_train()
+            the_history = model_train()
