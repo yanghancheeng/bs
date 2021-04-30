@@ -3,6 +3,7 @@
 import platform
 import sys
 import os
+
 sysEn = platform.system()
 if sysEn == "Linux":
     print('OS is linux!!!\n')
@@ -15,8 +16,6 @@ from matplotlib.pyplot import MultipleLocator
 import pandas as pd
 import numpy as np
 import math
-import pickle
-import time
 import tensorflow as tf
 
 if tf.__version__ == "1.13.1":  # 这是使用13版本的机器
@@ -29,11 +28,12 @@ else:
 
 
 def createPath(path):
-    if (not (os.path.exists(os.getcwd() + path))):
+    if not (os.path.exists(os.getcwd() + path)):
         os.mkdir(os.getcwd() + path)
         print("创建路径" + os.getcwd() + path)
 
 
+# 项目路径初始化
 createPath("\\log")
 createPath("\\log\\model_save")
 createPath("\\log\\plt")
@@ -43,36 +43,6 @@ input_height = 224
 input_width = 224
 nChannels = 3
 input_shape = (input_height, input_width, nChannels)
-
-
-def continue_train_def(experiment, filepath, ):
-    continue_train = get_eval("是否接上次模型", 1)
-    pkl_path = './log/plt/{}.pkl'.format(experiment)
-    if continue_train == 1 and os.access(filepath, os.F_OK):  #
-        if os.access(pkl_path, os.F_OK):  # pkl文件存在。衔接训练old_tra_loss等必须存在，若是直接移值h5,则plt文件夹中是没有pkl文件的，会报错
-            print("pkl文件存在")
-            time.sleep(2)
-            with open('./log/plt/{}.pkl'.format(experiment), 'rb') as file_pi:  # 读取上一次训练历史，以衔接完整损失精度曲线
-                old_history = pickle.load(file_pi)
-            old_tra_loss = old_history['loss']
-            old_val_loss = old_history['val_loss']
-            old_tra_acc = old_history[acc_value]  # 为防止因版本导致“acc”和“accuracy”改来改去，此变量统一在define.py中定义为acc_value
-            old_val_acc = old_history['val_' + acc_value]
-        else:
-            print("无pkl文件！")
-            old_tra_loss = []
-            old_val_loss = []
-            old_tra_acc = []
-            old_val_acc = []
-            time.sleep(2)
-    else:
-        if continue_train == 1:
-            print("不存在该模型!!\n")
-        if os.access(pkl_path, os.F_OK):
-            print("不存在pkl历史训练数据文件!!\n")
-        continue_train == 0
-        time.sleep(2)
-    return [continue_train, [old_tra_loss, old_val_loss, old_tra_acc, old_val_acc]]
 
 
 # 功能函数：路径列表函数改写os.listdir ==> comple_listdir

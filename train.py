@@ -1,17 +1,21 @@
 # coding: utf-8
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.callbacks import ModelCheckpoint  # EarlyStopping
-from define import *
-from my_Generator_Model import getModel, myAugDataGenerator
-import pickle
 from copy import deepcopy
+import pickle
+import time
+import cv2
+from define import *
+from labDiction import *
 from hxConfMat import myCMPlot
+from myModels import getModel
+from myGenerators import myDataGenerator
 
 
 def display():
     print('该次实验为：', experiment,
-          '\n可能的图像增强模式:', exp['typ'], '\n',
-          '\n训练好的模型将会保存在:', filepath, '\n',
+          '\n可能的图像增强模式:', exp['genTyp'], '\n',
+          '\n训练好的模型将会保存在:', wightSavePath, '\n',
           '有以下类别需要训练：', os.listdir('data/train/'), '\n',  # 最好再说一下具体的数目
           '\n训练集目录数据量:  ', Train_Num,
           '\n验证集目录数据量:  ', Val_Num,
@@ -25,25 +29,13 @@ def display():
         exit()
 
 
-# experiment_dir
-edr = {
-    # 实验名[0], 实验类型[1]（关系到数据生成方法）, 学习率[2], 训练是否包含原图[3] ,训练集验证集比值[4],数据集划分种子[5],学习率衰减系数[6]
-    # 实验类型对应。1：生成器无任何增强  2：普通数据增强  3：掩膜背景增强  4：混合（2和3）增强
-    0: {'exp': 'none',     'typ': 1, 'lr': 5e-3, 'inPre': 1, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 0},
-    1: {'exp': 'ImageNet', 'typ': 1, 'lr': 1e-5, 'inPre': 1, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 0},
-    2: {'exp': 'aug',      'typ': 2, 'lr': 1e-5, 'inPre': 0, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 4},
-    3: {'exp': 'mask',     'typ': 3, 'lr': 1e-5, 'inPre': 0, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 4},
-    4: {'exp': 'mask_aug', 'typ': 4, 'lr': 1e-5, 'inPre': 0, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 4},
-    5: {'exp': 'Xcep',     'typ': 4, 'lr': 2e-4, 'inPre': 0, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 4},
-    6: {'exp': 'Dense',    'typ': 4, 'lr': 2e-4, 'inPre': 0, 'TVSpl': 0.9, 'sed': 0, 'decay': 0.001, 'Aug': 4},
-}
-
 if __name__ == '__main__':
-    print(pd.DataFrame(edr).T)
-    sel = get_eval("实验", 6)
-    exp = edr[sel]  # dic
+    print(pdLabDic)
+    sel = get_eval("实验", 7)
+    exp = labDictionary[sel]  # dic
+    print('所选实验', exp, '\n')
     experiment = exp['exp']
-    filepath = './log/model_save/' + experiment + '.h5'  # 模型保存路径
+    wightSavePath = './log/model_save/' + experiment + '.h5'  # 模型保存路径
     # 学习率
     exp['lr'] = get_eval("学习率", exp['lr'])
     print("学习率衰减系数", exp['decay'], '\n')
@@ -51,11 +43,11 @@ if __name__ == '__main__':
     traDf, valDf, testDf = get_train_val_df('dataset.csv')
 
     # 增强倍数
-    if exp['typ'] != 1:  # 非类型一必要定义增强倍数
+    if not exp['genTyp'] is 'NTa_NMa':  # 非类型一必要定义增强倍数
         exp['Aug'] = get_eval("增强倍数Aug", exp['Aug'])
         exp['inPre'] = get_eval("inclPreImg", exp['inPre'])  # train_include_preimage
 
-    batch_size_val = batch_size = get_eval("batch_size", 4)
+    batch_size_val = batch_size = get_eval("batch_size", 8)
     epochs = get_eval("epochs", 1)
 
     Train_Num = traDf.shape[0]  # 训练集数据量（整型）
@@ -64,19 +56,34 @@ if __name__ == '__main__':
     display()
 
     # 数据集迭代器
-    print('生成器类型:', exp['typ'])
-    G1 = myAugDataGenerator(traDf, exp['typ'], exp['Aug'], batch_size, input_height, input_width,
-                            incl_preimg=exp['inPre'])
-    G2 = myAugDataGenerator(valDf, 1, 0, batch_size, input_height, input_width, incl_preimg=1)
-    GTest = myAugDataGenerator(testDf, 1, 0, 2, input_height, input_width, incl_preimg=1)
+    print('生成器类型:', exp['genTyp'], '\n')
+    time.sleep(2)
+    # 训练集生成器
+    G1 = myDataGenerator(DataFrame=traDf,
+                         genTyp=exp['genTyp'],
+                         Aug=exp['Aug'],
+                         batch_size=batch_size,
+                         incl_preimg=exp['inPre'])
+    # 验证集生成器
+    G2 = myDataGenerator(DataFrame=valDf,
+                         genTyp='NTa_NMa',  # 无任何增强生成器函数的字典索引
+                         Aug=0,
+                         batch_size=batch_size)
+    # 测试集生成器
+    GTest = myDataGenerator(DataFrame=testDf,
+                            genTyp='NTa_NMa',  # 无任何增强生成器函数的字典索引
+                            Aug=0,
+                            batch_size=batch_size)
+
     # 训练集生成抽样
-    # a = next(G1)
-    # cv2.imwrite('ck0.png', (a[0][0] + 1) * 127.5)
-    # cv2.imwrite('ck1.png', (a[0][1] + 1) * 127.5)
+    a = next(G1)
+    cv2.imwrite('ck0.png', (a[0][0] + 1) * 127.5)
+    cv2.imwrite('ck1.png', (a[0][1] + 1) * 127.5)
 
     # 续训与模型获取
-    continue_train, oldHistoryList = continue_train_def(experiment, filepath)  # 续训检测
-    model = getModel(sel, continue_train, input_shape, filepath)
+    model, oldHistoryList = getModel(wightSavePath,
+                                     backbone_name=exp['model'],
+                                     encoder_weights=exp['wight'])
 
     '''编译参数选择——交叉熵损失或二元损失'''
     model.compile(loss='categorical_crossentropy',  # binary_crossentropy categorical_crossentropy
@@ -87,7 +94,11 @@ if __name__ == '__main__':
 
     # 回调 checkpoint = ModelCheckpoint(filepath, monitor='val_'+acc_value, verbose=1, save_best_only=True,
     # save_weights_only=False, mode='max')
-    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, save_weights_only=False,
+    checkpoint = ModelCheckpoint(wightSavePath,
+                                 monitor='val_loss',
+                                 verbose=1,
+                                 save_best_only=True,
+                                 save_weights_only=False,
                                  mode='auto')
 
     callbacks_list = [checkpoint,
@@ -103,24 +114,24 @@ if __name__ == '__main__':
                                           validation_data=G2,
                                           validation_steps=Val_Num // batch_size + 1,  # 因为验证集不必要增强运算和内存占用，能省出更多资源利用
                                           epochs=epochs, )
-
-        score = model.evaluate_generator(GTest, Test_Num // 2)
-        print("样本准确率%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
-        if_CM = get_eval("是否绘制混淆矩阵", 0)
-        if if_CM is 1:
-            myCMPlot(model, experiment)
-        if continue_train == 1:
-            the_history.history['loss'] = oldHistoryList[0] + the_history.history['loss']
-            the_history.history['val_loss'] = oldHistoryList[1] + the_history.history['val_loss']
-            the_history.history[acc_value] = oldHistoryList[2] + the_history.history[acc_value]
-            the_history.history['val_' + acc_value] = oldHistoryList[3] + the_history.history['val_' + acc_value]
+        # test = True  # 测试开关
+        test = False  # 测试开关
+        if test:
+            score = model.evaluate_generator(GTest, Test_Num // 2)
+            print("样本准确率%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
+            if_CM = get_eval("是否绘制混淆矩阵", 0)
+            if if_CM is 1:
+                myCMPlot(model, experiment)
+        the_history.history['loss'] = oldHistoryList[0] + the_history.history['loss']
+        the_history.history['val_loss'] = oldHistoryList[1] + the_history.history['val_loss']
+        the_history.history[acc_value] = oldHistoryList[2] + the_history.history[acc_value]
+        the_history.history['val_' + acc_value] = oldHistoryList[3] + the_history.history['val_' + acc_value]
+        print('绘制训练曲线..')
         training_vis(the_history, './log/plt/', experiment)  # experiment为所作实验名
         save_history(the_history, './log/plt/', experiment)
         # 保存
-
         with open('./log/plt/{}.pkl'.format(experiment), 'wb') as file_pi:
             pickle.dump(the_history.history, file_pi)
-
         return the_history
 
 
@@ -142,7 +153,6 @@ if __name__ == '__main__':
                     print("程序结束~")
                     exit()
         else:
-            continue_train = 1
             oldHistoryList = [deepcopy(history.history['loss']),
                               deepcopy(history.history['val_loss']),
                               deepcopy(history.history[acc_value]),
