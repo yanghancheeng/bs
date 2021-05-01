@@ -99,7 +99,11 @@ def myCMPlot(model=None, experiment=None):
     err = []
     for i in range(len(rl)):
         if int(val_pics.category_code[indexls[i]]) != np.argmax(rl[i]):
-            print(i + 1, "预测为", label[np.argmax(rl[i])], "  ", val_pics.name[indexls[i]], "  预测错误")
+            print(i + 1, "预测为",
+                  label[np.argmax(rl[i])],
+                  "  ",
+                  val_pics.name[indexls[i]],
+                  "  预测错误")
             err.append(val_pics.name[indexls[i]])
     print("预测错误个数：", len(err), "  正确率", 1 - len(err) / 200)
 

@@ -57,6 +57,13 @@ def comple_listdir(in_path):
     return path_list
 
 
+# 功能函数，将若干字典进行拼接
+def dictsAdd(dic, *args):
+    for it in args:
+        dic = dict(list(dic.items()) + list(it.items()))
+    return dic
+
+
 # 数据集训练验证分割，训练样本平衡
 def get_train_val_df(file, frac=0.9, random_state=0, clothes='only_mz'):
     df = pd.read_csv(file)

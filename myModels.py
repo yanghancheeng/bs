@@ -4,7 +4,8 @@ from tensorflow.keras.layers import Flatten, Dense, GlobalAveragePooling2D  # , 
 from tensorflow.keras import Model
 from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications.xception import Xception
-from tensorflow.keras.applications.densenet import DenseNet121
+from tensorflow.keras.applications.densenet import DenseNet121, DenseNet169, DenseNet201
+from tensorflow.keras.applications.mobilenet import MobileNet
 import os
 import time
 import pickle
@@ -15,6 +16,9 @@ backbones = {
     "VGG": VGG16,
     "Xception": Xception,
     "DenseNet": DenseNet121,
+    "DenseNet2": DenseNet169,
+    "DenseNet3": DenseNet201,
+    "MobileNet": MobileNet,
 }
 
 

@@ -6,7 +6,8 @@ import pickle
 import time
 import cv2
 from define import *
-from labDiction import *
+# from lab_dic import *  # lab_dic、labs二选一
+from labs import *
 from hxConfMat import myCMPlot
 from myModels import getModel
 from myGenerators import myDataGenerator
@@ -30,9 +31,9 @@ def display():
 
 
 if __name__ == '__main__':
-    print(pdLabDic)
-    sel = get_eval("实验", 7)
-    exp = labDictionary[sel]  # dic
+    print(pdLabLis)
+    sel = get_eval("实验", 13)
+    exp = labList[sel]  # dic
     print('所选实验', exp, '\n')
     experiment = exp['exp']
     wightSavePath = './log/model_save/' + experiment + '.h5'  # 模型保存路径
@@ -47,7 +48,7 @@ if __name__ == '__main__':
         exp['Aug'] = get_eval("增强倍数Aug", exp['Aug'])
         exp['inPre'] = get_eval("inclPreImg", exp['inPre'])  # train_include_preimage
 
-    batch_size_val = batch_size = get_eval("batch_size", 8)
+    batch_size_val = batch_size = get_eval("batch_size", 2)
     epochs = get_eval("epochs", 1)
 
     Train_Num = traDf.shape[0]  # 训练集数据量（整型）
@@ -114,14 +115,7 @@ if __name__ == '__main__':
                                           validation_data=G2,
                                           validation_steps=Val_Num // batch_size + 1,  # 因为验证集不必要增强运算和内存占用，能省出更多资源利用
                                           epochs=epochs, )
-        # test = True  # 测试开关
-        test = False  # 测试开关
-        if test:
-            score = model.evaluate_generator(GTest, Test_Num // 2)
-            print("样本准确率%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
-            if_CM = get_eval("是否绘制混淆矩阵", 0)
-            if if_CM is 1:
-                myCMPlot(model, experiment)
+        # 绘图
         the_history.history['loss'] = oldHistoryList[0] + the_history.history['loss']
         the_history.history['val_loss'] = oldHistoryList[1] + the_history.history['val_loss']
         the_history.history[acc_value] = oldHistoryList[2] + the_history.history[acc_value]
@@ -129,9 +123,20 @@ if __name__ == '__main__':
         print('绘制训练曲线..')
         training_vis(the_history, './log/plt/', experiment)  # experiment为所作实验名
         save_history(the_history, './log/plt/', experiment)
-        # 保存
+        # 保存历史
         with open('./log/plt/{}.pkl'.format(experiment), 'wb') as file_pi:
             pickle.dump(the_history.history, file_pi)
+        # 测试
+        test = True  # 测试开关
+        # test = False  # 测试开关
+        if test:
+            score = model.evaluate_generator(GTest, Test_Num // 2)
+            print("样本准确率%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
+            if_CM = get_eval("是否绘制混淆矩阵", 0)
+            if if_CM is 1:
+                print('绘制混淆矩阵')
+                myCMPlot(model, experiment)
+
         return the_history
 
 
