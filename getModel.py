@@ -1,62 +1,26 @@
 # from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model  # , Model
-from tensorflow.keras.layers import Flatten, Dense, GlobalAveragePooling2D  # , Dropout
-from tensorflow.keras import Model
-from tensorflow.keras.applications.vgg16 import VGG16
-from tensorflow.keras.applications.xception import Xception
-from tensorflow.keras.applications.densenet import DenseNet121, DenseNet169, DenseNet201
-from tensorflow.keras.applications.mobilenet import MobileNet
 import os
 import time
 import pickle
 from define import acc_value, get_eval
+from models import *
+from labs import *
 
-# 特征提取器结构选择字典
-backbones = {
-    "VGG": VGG16,
-    "Xception": Xception,
-    "DenseNet": DenseNet121,
-    "DenseNet2": DenseNet169,
-    "DenseNet3": DenseNet201,
-    "MobileNet": MobileNet,
-}
+l_classify_model_type = l_name_vgg + \
+                        l_name_vgg19 + \
+                        l_name_DenseNet + \
+                        l_name_DenseNet169 + \
+                        l_name_DenseNet201 + \
+                        l_name_Xcep + \
+                        l_name_MobileNet
 
+l_complex_model_type = l_name_MinZuNet
 
-# 特征提取器选取与初始化
-def get_Mybackbone(name, *args, **kwargs):
-    return backbones[name](*args, **kwargs), name
-
-
-# 构建模型
-def build_model(backboneInfo, classes):
-    backbone = backboneInfo[0]
-    name = backboneInfo[1]
-    x = backbone.output
-    if name == "vgg":
-        x = Flatten(name='flatten')(x)
-    else:
-        x = GlobalAveragePooling2D()(x)
-    x = Dense(64, activation='relu')(x)
-    # x = Dense(128, activation='relu')(x)
-    predictions = Dense(classes, activation='sigmoid')(x)
-    model = Model(inputs=backbone.input, outputs=predictions)
-    return model
-
-
-def get_model(backbone_name='Dense',
-              input_shape=(224, 224, 3),
-              encoder_weights='imagenet',
-              classes=10,
-              ):
-    backbone = get_Mybackbone(backbone_name,
-                              input_shape=input_shape,
-                              weights=encoder_weights,
-                              include_top=False)
-
-    model = build_model(backbone,
-                        classes, )
-
-    return model
+# 字典类型
+get_model_fromDic = {}
+# get_classifyModels->分类模型大类
+get_model_fromDic.update({simple_model_name: get_classifyModels for simple_model_name in l_classify_model_type})
 
 
 # 续训检测
@@ -103,10 +67,12 @@ def getModel(wight_save_path, *args, **kwargs):
             print("接上次模型，但模型文件丢失，使用新权重，且pkl历史归零！\n次训练转为\n初训练~")
             time.sleep(4)
             old_tra_loss, old_val_loss, old_tra_acc, old_val_acc, = [], [], [], []
-            return get_model(*args, **kwargs), [old_tra_loss, old_val_loss, old_tra_acc, old_val_acc]
+            return get_model_fromDic[kwargs['model_name']](*args, **kwargs), [old_tra_loss, old_val_loss,
+                                                                              old_tra_acc, old_val_acc]
 
     else:
         print('初训练')
         time.sleep(2)
         old_tra_loss, old_val_loss, old_tra_acc, old_val_acc, = [], [], [], []
-        return get_model(*args, **kwargs), [old_tra_loss, old_val_loss, old_tra_acc, old_val_acc]
+        return get_model_fromDic[kwargs['model_name']](*args, **kwargs), [old_tra_loss, old_val_loss,
+                                                                          old_tra_acc, old_val_acc]

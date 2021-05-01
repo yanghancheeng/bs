@@ -9,8 +9,8 @@ from define import *
 # from lab_dic import *  # lab_dic、labs二选一
 from labs import *
 from hxConfMat import myCMPlot
-from myModels import getModel
-from myGenerators import myDataGenerator
+from getModel import *
+from getGenerators import *
 
 
 def display():
@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
     # 续训与模型获取
     model, oldHistoryList = getModel(wightSavePath,
-                                     backbone_name=exp['model'],
+                                     model_name=exp['model'],
                                      encoder_weights=exp['wight'])
 
     '''编译参数选择——交叉熵损失或二元损失'''

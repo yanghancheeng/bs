@@ -84,3 +84,15 @@ for i in range(len(labList)):
     labList[i] = dictsAdd(labList[i], com_Spl, com_dec)
 
 pdLabLis = pd.DataFrame(labList)
+
+
+# 某定义的模型调用时选取参数可能会取别名，增强程序健壮性
+l_name_vgg = ['VGG', 'vgg', 'VGG16', 'vgg16']
+l_name_vgg19 = ['VGG19', 'vgg19']
+l_name_Xcep = ['Xception', 'xception', 'Xcep', 'Xcep']
+l_name_DenseNet = ['DenseNet', 'denseNet', 'denseNet']
+l_name_DenseNet169 = ['DenseNet2', 'DenseNet169']
+l_name_DenseNet201 = ['DenseNet3', 'DenseNet201']
+l_name_MobileNet = ['MobileNet']
+# 可能将来要实现的
+l_name_MinZuNet = ['minzu', 'mz', 'MinZu']
