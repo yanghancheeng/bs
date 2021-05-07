@@ -2,12 +2,8 @@
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.callbacks import ModelCheckpoint  # EarlyStopping
 from copy import deepcopy
-import pickle
-import time
-import cv2
 from define import *
-# from lab_dic import *  # lab_dic、labs二选一
-from labs import *
+from labs import labs
 from hxConfMat import myCMPlot
 from getModel import *
 from getGenerators import *
@@ -31,11 +27,14 @@ def display():
 
 
 if __name__ == '__main__':
-    print(pdLabLis)
-    sel = get_eval("实验", 13)
-    exp = labList[sel]  # dic
+    # labs.updateLr(1)  # 将实验字典中所有学习率更改
+    print(labs.getDataFrame())
+
+    # 获取历史sel数据
+    exp = labs.labList[get_val_hist('sel', 9, '实验')]  # dic
+
     print('所选实验', exp, '\n')
-    experiment = exp['exp']
+    experiment = exp['exp'].replace("`", '')  # 去除实验名中奇怪的字符，如`
     wightSavePath = './log/model_save/' + experiment + '.h5'  # 模型保存路径
     # 学习率
     exp['lr'] = get_eval("学习率", exp['lr'])
@@ -45,10 +44,9 @@ if __name__ == '__main__':
 
     # 增强倍数
     if not exp['genTyp'] is 'NTa_NMa':  # 非类型一必要定义增强倍数
-        exp['Aug'] = get_eval("增强倍数Aug", exp['Aug'])
-        exp['inPre'] = get_eval("inclPreImg", exp['inPre'])  # train_include_preimage
+        exp['Aug'], exp['inPre'] = get_eval("增强倍数Aug", exp['Aug']), get_eval("inclPreImg", exp['inPre'])
 
-    batch_size_val = batch_size = get_eval("batch_size", 2)
+    batch_size_val = batch_size = get_val_hist("batch_size", 2)
     epochs = get_eval("epochs", 1)
 
     Train_Num = traDf.shape[0]  # 训练集数据量（整型）
@@ -88,7 +86,10 @@ if __name__ == '__main__':
 
     '''编译参数选择——交叉熵损失或二元损失'''
     model.compile(loss='categorical_crossentropy',  # binary_crossentropy categorical_crossentropy
-                  optimizer=SGD(lr=exp['lr'], decay=exp['decay'], momentum=0.9, nesterov=True),
+                  optimizer=SGD(lr=exp['lr'],
+                                decay=exp['decay'],
+                                momentum=0.9,
+                                nesterov=True),
                   # SGD(lr=1e-4,momentum=0.9)  Adam(lr=1e-4) , decay=1e-7
                   metrics=['accuracy'])  # ,get_lr_metric(optimizer)
     model.summary()
@@ -131,12 +132,11 @@ if __name__ == '__main__':
         # test = False  # 测试开关
         if test:
             score = model.evaluate_generator(GTest, Test_Num // 2)
-            print("样本准确率%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
+            print("样本准确率%s: %.2f%%\n" % (model.metrics_names[1], score[1] * 100))
             if_CM = get_eval("是否绘制混淆矩阵", 0)
             if if_CM is 1:
                 print('绘制混淆矩阵')
                 myCMPlot(model, experiment)
-
         return the_history
 
 
@@ -162,5 +162,4 @@ if __name__ == '__main__':
                               deepcopy(history.history['val_loss']),
                               deepcopy(history.history[acc_value]),
                               deepcopy(history.history['val_' + acc_value])]
-
             history = model_train()

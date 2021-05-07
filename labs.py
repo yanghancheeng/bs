@@ -1,98 +1,119 @@
 import pandas as pd
-from define import dictsAdd
 
-# 共用参数选择
-com_Spl = {'TVSpl': 0.9, 'sed': 0}
-com_dec = {'decay': 0.001}
-com_no_Aug = {'inPre': 1, 'Aug': 0}
-com_is_Aug = {'inPre': 0, 'Aug': 4}
+
+def dictsAdd(dic, *args):
+    for it in args:
+        dic = dict(list(dic.items()) + list(it.items()))
+    return dic
+
+
+class Labs:
+    # 共用参数选择
+    com_Spl = {'TVSpl': 0.9, 'sed': 0}
+    com_dec = {'decay': 0.001}
+    labList = []
+
+    def __init__(self, *args):
+        for lab in args:
+            self.labList.append(dictsAdd(lab, self.com_Spl, self.com_dec))
+
+    def addLab(self, dic):
+        self.labList.append(dictsAdd(dic, self.com_Spl, self.com_dec))
+
+    def addGoodLab(self, *args):
+        for lab in args:
+            self.labList.append(dictsAdd(lab, self.com_Spl, self.com_dec, {'wight': 'imagenet', 'lr': 2e-4,
+                                                                           'genTyp': "Ta_Ma", 'inPre': 0, 'Aug': 4}))
+
+    def getDataFrame(self):
+        return pd.DataFrame(self.labList)
+
+    def updateLr(self, lr):
+        if not (lr is None) and lr > 0:
+            for i in range(len(self.labList)):
+                self.labList[i]["lr"] = lr
+
 
 # 注册实验
-labList = [
-    # 实验0：VGG模型，随机权重，无任何数据增强
+labs = Labs(
+
+    # VGG模型，随机权重，无任何数据增强
     {'exp': 'VGG_N_N',
-     'model': 'VGG', 'wight': None, 'lr': 5e-3,
+     'model': 'VGG16', 'wight': None, 'lr': 1e-5,
      'genTyp': 'NTa_NMa', 'inPre': 1, 'Aug': 0},
-
-    # 实验1：VGG模型，随机权重，无任何数据增强
+    # VGG模型，ImageNet权重，无任何数据增强
     {'exp': 'VGG_Imag_N',
-     'model': 'VGG', 'wight': 'imagenet', 'lr': 1e-5,
+     'model': 'VGG16', 'wight': 'imagenet', 'lr': 1e-5,
      'genTyp': 'NTa_NMa', 'inPre': 1, 'Aug': 0},
 
-    # 实验2：VGG模型，ImageNet权重，传统数据增强
+    # VGG模型，ImageNet权重，传统数据增强
     {'exp': 'VGG_Imag_T',
-     'model': 'VGG', 'wight': 'imagenet', 'lr': 1e-5,
+     'model': 'VGG16', 'wight': 'imagenet', 'lr': 1e-5,
      'genTyp': "Ta_NMa", 'inPre': 0, 'Aug': 4},
 
-    # 实验3：VGG模型，ImageNet权重，掩膜数据增强
+    # VGG模型，ImageNet权重，掩膜数据增强
     {'exp': 'VGG_Imag_M',
-     'model': 'VGG', 'wight': 'imagenet', 'lr': 1e-5,
+     'model': 'VGG16', 'wight': 'imagenet', 'lr': 1e-5,
      'genTyp': "NTa_Ma", 'inPre': 0, 'Aug': 4},
 
-    # 实验4：VGG模型，ImageNet权重，混合数据增强
-    {'exp': 'VGG_Imag_TM',
-     'model': 'VGG', 'wight': 'imagenet', 'lr': 1e-5,
+    # VGG模型，ImageNet权重，混合数据增强
+    {'exp': '`VGG_Imag_TM',
+     'model': 'VGG16', 'wight': 'imagenet', 'lr': 1e-5,
      'genTyp': "Ta_Ma", 'inPre': 0, 'Aug': 4},
 
-    # 实验5：Xception模型，ImageNet权重，混合数据增强
-    {'exp': 'Xcep_Image_TM',
+    # Xception模型，ImageNet权重，混合数据增强
+    {'exp': '`Xcep_Image_TM',
      'model': 'Xception', 'wight': 'imagenet', 'lr': 1e-5,
      'genTyp': "Ta_Ma", 'inPre': 0, 'Aug': 4},
 
-    # 实验7：DneseNet模型，随机权重，无数据增强
+    # DneseNet模型，随机权重，无数据增强
     {'exp': 'Dense_N_N',
-     'model': 'DenseNet', 'wight': None, 'lr': 2e-4,
+     'model': 'DenseNet121', 'wight': None, 'lr': 2e-4,
      'genTyp': "NTa_NMa", 'inPre': 1, 'Aug': 0},
 
-    # 实验8：DneseNet模型，ImageNet权重，无数据增强
+    # DneseNet模型，ImageNet权重，无数据增强
     {'exp': 'Dense_Image_N',
-     'model': 'DenseNet', 'wight': 'imagenet', 'lr': 2e-4,
+     'model': 'DenseNet121', 'wight': 'imagenet', 'lr': 2e-4,
      'genTyp': "NTa_NMa", 'inPre': 1, 'Aug': 0},
 
-    # 实验9：DneseNet模型，ImageNet权重，传统数据增强
+    # DneseNet模型，ImageNet权重，传统数据增强
     {'exp': 'Dense_Image_T',
-     'model': 'DenseNet', 'wight': 'imagenet', 'lr': 2e-4,
+     'model': 'DenseNet121', 'wight': 'imagenet', 'lr': 2e-4,
      'genTyp': "Ta_NMa", 'inPre': 0, 'Aug': 4},
 
-    # 实验9：DneseNet模型，ImageNet权重，背景数据增强
+    # DneseNet模型，ImageNet权重，背景数据增强
     {'exp': 'Dense_Image_M',
-     'model': 'DenseNet', 'wight': 'imagenet', 'lr': 2e-4,
+     'model': 'DenseNet121', 'wight': 'imagenet', 'lr': 2e-4,
      'genTyp': "NTa_Ma", 'inPre': 0, 'Aug': 4},
 
-    # 实验10：DneseNet模型，ImageNet权重，混合数据增强
-    {'exp': 'Dense_Imag_TM',
-     'model': 'DenseNet', 'wight': 'imagenet', 'lr': 2e-4,
+    # DneseNet模型，ImageNet权重，混合数据增强
+    {'exp': '`Dense_Imag_TM',
+     'model': 'DenseNet121', 'wight': 'imagenet', 'lr': 2e-4,
      'genTyp': "Ta_Ma", 'inPre': 0, 'Aug': 4},
 
-    # 实验11：DneseNet169模型，ImageNet权重，混合数据增强
-    {'exp': 'Dense2_Imag_TM',
-     'model': 'DenseNet2', 'wight': 'imagenet', 'lr': 2e-4,
+    # DneseNet169模型，ImageNet权重，混合数据增强
+    {'exp': '`Dense2_Imag_TM',
+     'model': 'DenseNet169', 'wight': 'imagenet', 'lr': 2e-4,
      'genTyp': "Ta_Ma", 'inPre': 0, 'Aug': 4},
 
-    # 实验12：DneseNet201模型，ImageNet权重，混合数据增强
-    {'exp': 'Dense3_Imag_TM',
-     'model': 'DenseNet3', 'wight': 'imagenet', 'lr': 2e-4,
+    # DneseNet201模型，ImageNet权重，混合数据增强
+    {'exp': '`Dense3_Imag_TM',
+     'model': 'DenseNet201', 'wight': 'imagenet', 'lr': 2e-4,
      'genTyp': "Ta_Ma", 'inPre': 0, 'Aug': 4},
+)
 
-    # 实验13：MobileNet模型，ImageNet权重，混合数据增强
-    {'exp': 'Mobile_Imag_TM',
-     'model': 'MobileNet', 'wight': 'imagenet', 'lr': 2e-4,
-     'genTyp': "Ta_Ma", 'inPre': 0, 'Aug': 4},
-]
+labs.addGoodLab(
+    # MobileNet模型，ImageNet权重，混合数据增强
+    {'exp': '`Mobile_Imag_TM',
+     'model': 'MobileNet'},
+    # NASNetLarge，标准参数
+    {'exp': '`NASNet_Imag_TM',
+     'model': 'NASNetMobile'},
+    # NASNetLarge，标准参数
+    {'exp': '`ResNet50V2_Imag_TM',
+     'model': 'ResNet50V2'},
+    # NASNetLarge，标准参数
+    {'exp': '`IncepResNetV2_Imag_TM',
+     'model': 'InceptionResNetV2'},
 
-for i in range(len(labList)):
-    labList[i] = dictsAdd(labList[i], com_Spl, com_dec)
-
-pdLabLis = pd.DataFrame(labList)
-
-
-# 某定义的模型调用时选取参数可能会取别名，增强程序健壮性
-l_name_vgg = ['VGG', 'vgg', 'VGG16', 'vgg16']
-l_name_vgg19 = ['VGG19', 'vgg19']
-l_name_Xcep = ['Xception', 'xception', 'Xcep', 'Xcep']
-l_name_DenseNet = ['DenseNet', 'denseNet', 'denseNet']
-l_name_DenseNet169 = ['DenseNet2', 'DenseNet169']
-l_name_DenseNet201 = ['DenseNet3', 'DenseNet201']
-l_name_MobileNet = ['MobileNet']
-# 可能将来要实现的
-l_name_MinZuNet = ['minzu', 'mz', 'MinZu']
+)

@@ -16,6 +16,7 @@ from matplotlib.pyplot import MultipleLocator
 import pandas as pd
 import numpy as np
 import math
+import pickle
 import tensorflow as tf
 
 if tf.__version__ == "1.13.1":  # 这是使用13版本的机器
@@ -57,13 +58,6 @@ def comple_listdir(in_path):
     return path_list
 
 
-# 功能函数，将若干字典进行拼接
-def dictsAdd(dic, *args):
-    for it in args:
-        dic = dict(list(dic.items()) + list(it.items()))
-    return dic
-
-
 # 数据集训练验证分割，训练样本平衡
 def get_train_val_df(file, frac=0.9, random_state=0, clothes='only_mz'):
     df = pd.read_csv(file)
@@ -80,24 +74,36 @@ def get_train_val_df(file, frac=0.9, random_state=0, clothes='only_mz'):
 
 
 # 默认值提示修改工具
-def get_eval(name, default_val):
+def get_eval(tip, default_val):
     theVal = default_val
-    print(name, ' 默认:', theVal)
+    print(tip, ' 默认:', theVal)
     temp = input("请修改输入值，或回车 ：")
     if temp != '':  # ''为回车
         theVal = eval(temp)
-    print('现', name, '为：', theVal, "\n")
+    print('现', tip, '为：', theVal, "\n")
     return theVal
 
 
-def get_str(name, default_val):
+def get_str(tip, default_val):
     theStr = default_val
-    print(name, ' 默认:', theStr)
+    print(tip, ' 默认:', theStr)
     temp = input("请修改输入值，或回车 ：")
     if temp != '':  # ''为回车
         theStr = temp
-    print('现', name, '为：', theStr, "\n")
+    print('现', tip, '为：', theStr, "\n")
     return theStr
+
+
+def get_val_hist(var_name, var, tip=None):
+    if os.access('./log/{}.pkl'.format(var_name), os.F_OK):
+        with open('./log/{}.pkl'.format(var_name), 'rb') as file_var:  # 读取上一次训练历史，以衔接完整损失精度曲线
+            var = pickle.load(file_var)
+    if tip is None:
+        tip = var_name
+    var = get_eval(tip, var)
+    with open('./log/{}.pkl'.format(var_name), 'wb') as file_var:
+        pickle.dump(var, file_var)
+    return var
 
 
 # 日志可视化，训练过程中的损失、精度变化

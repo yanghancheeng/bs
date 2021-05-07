@@ -5,22 +5,6 @@ import time
 import pickle
 from define import acc_value, get_eval
 from models import *
-from labs import *
-
-l_classify_model_type = l_name_vgg + \
-                        l_name_vgg19 + \
-                        l_name_DenseNet + \
-                        l_name_DenseNet169 + \
-                        l_name_DenseNet201 + \
-                        l_name_Xcep + \
-                        l_name_MobileNet
-
-l_complex_model_type = l_name_MinZuNet
-
-# 字典类型
-get_model_fromDic = {}
-# get_classifyModels->分类模型大类
-get_model_fromDic.update({simple_model_name: get_classifyModels for simple_model_name in l_classify_model_type})
 
 
 # 续训检测
@@ -67,12 +51,12 @@ def getModel(wight_save_path, *args, **kwargs):
             print("接上次模型，但模型文件丢失，使用新权重，且pkl历史归零！\n次训练转为\n初训练~")
             time.sleep(4)
             old_tra_loss, old_val_loss, old_tra_acc, old_val_acc, = [], [], [], []
-            return get_model_fromDic[kwargs['model_name']](*args, **kwargs), [old_tra_loss, old_val_loss,
+            return get_classifyModels(*args, **kwargs), [old_tra_loss, old_val_loss,
                                                                               old_tra_acc, old_val_acc]
 
     else:
         print('初训练')
         time.sleep(2)
         old_tra_loss, old_val_loss, old_tra_acc, old_val_acc, = [], [], [], []
-        return get_model_fromDic[kwargs['model_name']](*args, **kwargs), [old_tra_loss, old_val_loss,
+        return get_classifyModels(*args, **kwargs), [old_tra_loss, old_val_loss,
                                                                           old_tra_acc, old_val_acc]
